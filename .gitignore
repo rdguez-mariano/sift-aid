@@ -1,0 +1,11 @@
+imgs-*/
+*.jpg
+__pycache__/
+summaries/
+acc-test/*main
+py-tests
+.vscode
+build/
+*.npz
+db-gen-*/
+temp
