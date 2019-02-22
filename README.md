@@ -142,6 +142,12 @@ sudo dpkg-reconfigure locales
 ## Authors
 
 * **Mariano Rodríguez** - [web page](https://rdguez-mariano.github.io/)
+* **Gabriele Facciolo**
+* **Rafael Grompone Von Gioi**
+* **Pablo Musé**
+* **Jean-Michel Morel** - [web page](https://sites.google.com/site/jeanmichelmorelcmlaenscachan/)
+* **Julie Delon** - [web page](https://delon.wp.imt.fr/)
+
 
 ## License
 
