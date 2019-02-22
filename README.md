@@ -2,7 +2,7 @@
 
 This repository implements SIFT-AID, an affine invariant method for matching two images. The companion paper can be found [here](https://rdguez-mariano.github.io/pages/sift-aid).
 
-## Setting up
+## Prerequisites
 
 Before starting to use SIFT-AID be sure of the following.
 
@@ -43,6 +43,21 @@ If AttributeError: module 'cv2.cv2' has no attribute 'xfeatures2d' reinstall ope
 pip uninstall opencv-contrib-python
 pip install opencv-python==3.4.2.16
 ```
+
+## Launching SIFT-AID
+
+The function `siftAID` in libLocalDesc.py will execute SIFT-AID with the network descritor loaded from [model.AID_simCos_BigDesc_dropout_75.hdf5](model-data/model.AID_simCos_BigDesc_dropout_75.hdf5).
+
+```python
+from libLocalDesc import *
+
+img1 = cv2.cvtColor(cv2.imread('./acc-test/coca.1.png'),cv2.COLOR_BGR2GRAY)
+img2 = cv2.cvtColor(cv2.imread('./acc-test/coca.2.png'),cv2.COLOR_BGR2GRAY)
+
+_, good_HC, ET_KP, ET_M = siftAID(img1,img2, MatchingThres = 4000, Simi = 'SignProx', Visual=True)
+print("SIFT-AID --> FilteredMatches = %d, KeypointsTime = %3.3f, MatchingTime = %3.3f" %(len(good_HC),ET_KP,ET_M))
+```
+An example of its use can be found in [gen-ICIP19-TeaserImages.py](py-tools/gen-ICIP19-TeaserImages.py).
 
 ## Training the descriptor network
 
@@ -124,17 +139,25 @@ export LC_CTYPE="en_US.UTF-8"
 sudo dpkg-reconfigure locales
 ```
 
-## Launching SIFT-AID
+## Authors
 
-The function `siftAID` in libLocalDesc.py will execute SIFT-AID with the network descritor loaded from [model.AID_simCos_BigDesc_dropout_75.hdf5](model-data/model.AID_simCos_BigDesc_dropout_75.hdf5).
+* **Mariano Rodríguez** - [web page](https://rdguez-mariano.github.io/)
 
-```python
-from libLocalDesc import *
+## License
 
-img1 = cv2.cvtColor(cv2.imread('./acc-test/coca.1.png'),cv2.COLOR_BGR2GRAY)
-img2 = cv2.cvtColor(cv2.imread('./acc-test/coca.2.png'),cv2.COLOR_BGR2GRAY)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
-_, good_HC, ET_KP, ET_M = siftAID(img1,img2, MatchingThres = 4000, Simi = 'SignProx', Visual=True)
-print("SIFT-AID --> FilteredMatches = %d, KeypointsTime = %3.3f, MatchingTime = %3.3f" %(len(good_HC),ET_KP,ET_M))
-```
-An example of its use can be found in [gen-ICIP19-TeaserImages.py](py-tools/gen-ICIP19-TeaserImages.py).
+## Acknowledgements
+
+##### Contributors
+
+* **Jéremy Anger** [(web page)](http://dev.ipol.im/~anger/) and **Axel Davy** [(web page)](http://dev.ipol.im/~adavy/) pointed out the need of CPU vector operations to optimize time computations.
+
+##### This project can optionally
+
+* call libOrsa, libMatch and libNumerics. Copyright (C) 2007-2010, Lionel Moisan, distributed under the BSD license.
+* call libUSAC. Copyright (c) 2012 University of North Carolina at Chapel Hill / See its [web page](http://www.cs.unc.edu/~rraguram/usac/) to see their specific associated licence.
+
+## Github repository
+
+<https://github.com/rdguez-mariano/sift-aid>

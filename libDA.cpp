@@ -29,11 +29,12 @@
 #define VecDescDim 128 // as in (x,x,128) output of the network
 #define SameKPThres 4
 
+
 struct TargetNode
 {
   const int TargetIdx; float sim_with_query;
   TargetNode(int Idx, float sim):TargetIdx(Idx){ this->sim_with_query = sim; };
-  bool operator <(const TargetNode & kp) {return ( this->sim_with_query>kp.sim_with_query );};
+  bool operator >(const TargetNode & kp) {return ( this->sim_with_query>kp.sim_with_query );};
   bool operator ==(const TargetNode & kp) {return ( this->sim_with_query==kp.sim_with_query );};
 };
 
@@ -47,12 +48,18 @@ struct QueryNode
   void Add_TargetNode(int it, float sim, int MaxTnodes_num)
   {
     TargetNode tn(it,sim);
-    MostSimilar_TargetNodes.push_back( tn );
-    MostSimilar_TargetNodes.sort();
+    std::list<TargetNode>::iterator target_iter;
+    for(target_iter = MostSimilar_TargetNodes.begin(); target_iter != MostSimilar_TargetNodes.end(); ++target_iter)
+      if ( tn > *target_iter )
+        break;
+
+    MostSimilar_TargetNodes.insert( target_iter, tn );
     if (MaxTnodes_num>0 && MostSimilar_TargetNodes.size()>MaxTnodes_num)
       MostSimilar_TargetNodes.pop_back();
       last_sim = (--MostSimilar_TargetNodes.end())->sim_with_query;
-    first_sim = MostSimilar_TargetNodes.begin()->sim_with_query;  };
+    first_sim = MostSimilar_TargetNodes.begin()->sim_with_query;  
+  };
+
   QueryNode(int Idx):QueryIdx(Idx){ first_sim = -1; last_sim = -1; };
 };
 
@@ -60,6 +67,8 @@ struct DescStatsClass
 {
   float norm, max, min, mean, sigma;
   std::bitset<FullDescDim> AID;
+  std::bitset<VecDescDim> AIDbyVec [FullDescDim/VecDescDim];
+
   DescStatsClass()
   {
     norm = 0.0f, mean = 0.0f, sigma = 0.0f;
@@ -67,6 +76,16 @@ struct DescStatsClass
     min = std::numeric_limits<float>::infinity();
   };
 };
+
+
+int CountItFast(const DescStatsClass & q, const DescStatsClass & t, int thres)
+{
+  int xor_opp = 0;
+  for (int v = 0; (v < FullDescDim/VecDescDim && (xor_opp < thres)); v++)
+    xor_opp +=  (q.AIDbyVec[v] ^ t.AIDbyVec[v]).count();
+  return(xor_opp);
+}
+
 
 float FastSimi(int iq, float* DescsQuery, DescStatsClass* QueryStats, int it, float* DescsTarget, DescStatsClass* TargetStats, float simi_thres)
 {
@@ -98,6 +117,16 @@ DescStatsClass LoadInfo(int iq, float* DescsQuery)
     {
       ds.AID.set(i);
     }
+
+  for (int v = 0; (v < FullDescDim/VecDescDim); v++)
+  {
+    int vpos = VecDescDim*v;
+    for (int i = 0; (i < VecDescDim); i++)
+      {
+        if (DescsQuery[qpos + vpos + i]>=0)
+          ds.AIDbyVec[v].set(i);
+      }
+  }
 
   ds.norm = std::sqrt(ds.norm);
   return(ds);
@@ -169,9 +198,9 @@ struct MatchersClass
           QueryNode qn(iq);
           for (int it = 0; it < Ntarget; it++)
           {
-            float this_simi_thres = (this->k > 0 && qn.last_sim > sim_thres) ? qn.last_sim : sim_thres;
-            float simi = FastSimi(iq, DescsQuery, QueryStats, it, DescsTarget, TargetStats, this_simi_thres);
-            if (simi > this_simi_thres)
+            float updated_sim_thres = (this->k > 0 && qn.last_sim > sim_thres) ? qn.last_sim : sim_thres;
+            float simi = FastSimi(iq, DescsQuery, QueryStats, it, DescsTarget, TargetStats, updated_sim_thres);
+            if (simi > updated_sim_thres)
               qn.Add_TargetNode(it, simi, this->k);
           }
           if (qn.first_sim > sim_thres)
@@ -185,6 +214,34 @@ struct MatchersClass
         break;
       } // end of BigAID
       case 1:
+      { // model new AID
+        // std::cout << "---> Full sign comparisons with bitset!!!" << std::endl;
+  #pragma omp parallel for default(shared)
+        for (int iq = 0; iq < Nquery; iq++)
+        {
+          QueryNode qn(iq);
+          float updated_sim_thres;
+          for (int it = 0; it < Ntarget; it++)
+          {
+            // This is like counting bits after an XNOR opperation on both binary descriptors
+            updated_sim_thres = (this->k > 0 && qn.last_sim > sim_thres) ? qn.last_sim : sim_thres;
+            float simi = (float) ( FullDescDim - CountItFast(QueryStats[iq], TargetStats[it], FullDescDim - updated_sim_thres) );
+            if (simi > updated_sim_thres)
+              qn.Add_TargetNode(it, simi, this->k);
+          }
+          if (qn.first_sim > sim_thres)
+          {
+  #pragma omp critical
+            {
+              QueryNodes.push_back(qn);
+              std::list<QueryNode>::iterator itqn = --QueryNodes.end();
+              itqn->thisQueryNodeOnList = itqn;
+            }
+          }
+        }
+        break;
+      } // end of AID
+      case 2:
       { // model AID
         // std::cout << "---> Full sign comparisons with bitset!!!" << std::endl;
   #pragma omp parallel for default(shared)
@@ -195,9 +252,9 @@ struct MatchersClass
           {
             // This is like counting bits after an XNOR opperation on both binary descriptors
             int concor = FullDescDim - (QueryStats[iq].AID ^ TargetStats[it].AID).count();
-            float this_simi_thres = (this->k > 0 && qn.last_sim > sim_thres) ? qn.last_sim : sim_thres;
+            float updated_sim_thres = (this->k > 0 && qn.last_sim > sim_thres) ? qn.last_sim : sim_thres;
             float simi = (float)concor;
-            if (simi > this_simi_thres)
+            if (simi > updated_sim_thres)
               qn.Add_TargetNode(it, simi, this->k);
           }
           if (qn.first_sim > sim_thres)
