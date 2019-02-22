@@ -1,4 +1,4 @@
-# SIFT-AID : An affine invariant descriptor for SIFT
+# AID : An affine invariant descriptor for SIFT
 
 This repository implements SIFT-AID, an affine invariant method for matching two images. The companion paper can be found [here](https://rdguez-mariano.github.io/pages/sift-aid).
 
