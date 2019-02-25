@@ -6,7 +6,6 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <omp.h>
 #include <list>
 #include <vector>
 #include <stdio.h>
