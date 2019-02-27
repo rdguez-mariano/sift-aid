@@ -955,10 +955,10 @@ class CPPbridge(object):
         self.last_i1_list = []
         self.last_i2_list = []
 
-        self.libDA.GeometricFilter.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_bool]
+        self.libDA.GeometricFilter.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_bool]
         self.libDA.GeometricFilter.restype = None
 
-        self.libDA.GeometricFilterFromNodes.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_bool]
+        self.libDA.GeometricFilterFromNodes.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_bool]
         self.libDA.GeometricFilterFromNodes.restype = None
         self.libDA.ArrayOfFilteredMatches.argtypes = [ctypes.c_void_p,ctypes.c_void_p]
         self.libDA.GeometricFilterFromNodes.restype = None
@@ -988,7 +988,7 @@ class CPPbridge(object):
         ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p]
         self.libDA.FastMatCombi.restype = None
 
-    def GeometricFilter(self, scr_pts, im1, dts_pts, im2, Filer = 'ORSA_H', verb=False):
+    def GeometricFilter(self, scr_pts, im1, dts_pts, im2, Filer = 'ORSA_H', precision = 10, verb=False):
         filercode=0
         if Filer=='ORSA_F':
             filercode=1
@@ -1003,10 +1003,10 @@ class CPPbridge(object):
         h2, w2 = im2.shape[:2]
         self.libDA.GeometricFilter(scr_pts.ctypes.data_as(floatp), dts_pts.ctypes.data_as(floatp),
                                     MatchMask.ctypes.data_as(boolp), T.ctypes.data_as(floatp),
-                                    N, w1, h1, w2, h2, filercode, verb)
+                                    N, w1, h1, w2, h2, filercode, ctypes.c_float(precision), verb)
         return MatchMask.astype(np.bool), T.astype(np.float).reshape(3,3)
 
-    def GeometricFilterFromMatcher(self, im1, im2, Filer = 'ORSA_H', verb=False):
+    def GeometricFilterFromMatcher(self, im1, im2, Filer = 'ORSA_H', precision=24, verb=False):
         filercode=0
         if Filer=='ORSA_F':
             filercode=1
@@ -1017,7 +1017,7 @@ class CPPbridge(object):
         h1, w1 = im1.shape[:2]
         h2, w2 = im2.shape[:2]
         self.libDA.GeometricFilterFromNodes(self.MatcherPtr, T.ctypes.data_as(floatp),
-                                    w1, h1, w2, h2, filercode, verb)
+                                    w1, h1, w2, h2, filercode, ctypes.c_float(precision), verb)
               
         NFM = self.libDA.NumberOfFilteredMatches(self.MatcherPtr)
         FM = np.zeros(3*NFM, dtype = ctypes.c_int)

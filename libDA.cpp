@@ -317,7 +317,7 @@ std::vector<Match> UniqueFilter(const std::vector<Match>& matches)
   return uniqueM;
 }
 
-void ORSA_Filter(std::vector<Match>& matches, bool* MatchMask, float* T, int w1,int h1,int w2,int h2, bool Fundamental, bool verb)
+void ORSA_Filter(std::vector<Match>& matches, bool* MatchMask, float* T, int w1,int h1,int w2,int h2, bool Fundamental, const double & precision, bool verb)
 {
   libNumerics::matrix<double> H(3,3);
   std::vector<int> vec_inliers;
@@ -325,15 +325,10 @@ void ORSA_Filter(std::vector<Match>& matches, bool* MatchMask, float* T, int w1,
   const float nfa_max = -2;
   const int ITER_ORSA=10000;
   if (Fundamental)
-  {
-    const double precision = 3;
     orsa::orsa_fundamental(matches, w1,h1,w2,h2, precision, ITER_ORSA,H, vec_inliers,nfa,verb);
-  }
   else
-  {
-    const double precision = 24;
-    orsa::ORSA_homography(matches, w1,h1,w2,h2, precision, ITER_ORSA,H, vec_inliers,nfa,verb);
-  }
+     orsa::ORSA_homography(matches, w1,h1,w2,h2, precision, ITER_ORSA,H, vec_inliers,nfa,verb);
+
   for (int cc = 0; cc < matches.size(); cc++ )
     MatchMask[cc] = false;
 
@@ -382,7 +377,7 @@ extern "C"
       arr[i] = M->FilteredIdxMatches[i];
   }
 
-  void GeometricFilterFromNodes(MatchersClass* M, float* T, int w1,int h1,int w2,int h2, int type, bool verb)
+  void GeometricFilterFromNodes(MatchersClass* M, float* T, int w1,int h1,int w2,int h2, int type, float precision, bool verb)
   {
     std::vector<Match> matches;    
     for(std::list<QueryNode>::const_iterator iq = M->QueryNodes.begin(); iq != M->QueryNodes.end(); ++iq) 
@@ -405,12 +400,12 @@ extern "C"
     {
       case 0: //Homography
       {
-        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, false, verb);
+        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, false, (double)precision, verb);
         break;
       }
       case 1: // Fundamental
       {
-        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, true,verb);
+        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, true, (double)precision, verb);
         break;
       }
     }
@@ -431,7 +426,7 @@ extern "C"
         }
   }
 
-  void GeometricFilter(float* scr_pts, float* dts_pts, bool* MatchMask, float* T, int N, int w1,int h1,int w2,int h2, int type, bool verb)
+  void GeometricFilter(float* scr_pts, float* dts_pts, bool* MatchMask, float* T, int N, int w1,int h1,int w2,int h2, int type, float precision, bool verb)
   {
     std::vector<Match> matches;
     for (int cc = 0; cc < N; cc++ )
@@ -449,12 +444,12 @@ extern "C"
     {
       case 0: //Homography
       {
-        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, false, verb);
+        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, false, (double)precision, verb);
         break;
       }
       case 1: // Fundamental
       {
-        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, true,verb);
+        ORSA_Filter(matches, MatchMask, T, w1, h1, w2, h2, true, (double)precision, verb);
         break;
       }
     }
